@@ -46,14 +46,22 @@ class VisualizationDemo(object):
         """
         vis_output = None
         predictions = self.predictor(image)
+        # print(f"predictions = {predictions.keys()}") # 'sem_seg', 'panoptic_seg', 'instances'
+        # print(f"predictions['panoptic_seg'] = {predictions['panoptic_seg'][0].shape}") # [1024, 2048]
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
         image = image[:, :, ::-1]
+        # print(f"image = {image.shape}") # (1024, 2048, 3)
+        # print(f"self.metadata = {self.metadata}")
+        # Metadata(evaluator_type='cityscapes_panoptic_seg', gt_dir='datasets/cityscapes/gtFine/val', ignore_label=255, image_root='datasets/cityscapes/leftImg8bit/val', label_divisor=1000, name='cityscapes_fine_panoptic_val', panoptic_json='datasets/cityscapes/gtFine/cityscapes_panoptic_val.json', panoptic_root='datasets/cityscapes/gtFine/cityscapes_panoptic_val', stuff_classes=['road', 'sidewalk', 'building', 'wall', 'fence', 'pole', 'traffic light', 'traffic sign', 'vegetation', 'terrain', 'sky', 'person', 'rider', 'car', 'truck', 'bus', 'train', 'motorcycle', 'bicycle'], stuff_colors=[(128, 64, 128), (244, 35, 232), (70, 70, 70), (102, 102, 156), (190, 153, 153), (153, 153, 153), (250, 170, 30), (220, 220, 0), (107, 142, 35), (152, 251, 152), (70, 130, 180), (220, 20, 60), (255, 0, 0), (0, 0, 142), (0, 0, 70), (0, 60, 100), (0, 80, 100), (0, 0, 230), (119, 11, 32)], stuff_dataset_id_to_contiguous_id={7: 0, 8: 1, 11: 2, 12: 3, 13: 4, 17: 5, 19: 6, 20: 7, 21: 8, 22: 9, 23: 10}, thing_classes=['road', 'sidewalk', 'building', 'wall', 'fence', 'pole', 'traffic light', 'traffic sign', 'vegetation', 'terrain', 'sky', 'person', 'rider', 'car', 'truck', 'bus', 'train', 'motorcycle', 'bicycle'], thing_colors=[(128, 64, 128), (244, 35, 232), (70, 70, 70), (102, 102, 156), (190, 153, 153), (153, 153, 153), (250, 170, 30), (220, 220, 0), (107, 142, 35), (152, 251, 152), (70, 130, 180), (220, 20, 60), (255, 0, 0), (0, 0, 142), (0, 0, 70), (0, 60, 100), (0, 80, 100), (0, 0, 230), (119, 11, 32)], thing_dataset_id_to_contiguous_id={24: 11, 25: 12, 26: 13, 27: 14, 28: 15, 31: 16, 32: 17, 33: 18})
+        # print(f"self.instance_mode = {self.instance_mode}") # ColorMode.IMAGE
+        
         visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
         if "panoptic_seg" in predictions:
             panoptic_seg, segments_info = predictions["panoptic_seg"]
+            print(f"panoptic_seg = {panoptic_seg.shape}")
+            print(f"segments_info = {segments_info}") # None
             vis_output = visualizer.draw_panoptic_seg_predictions(
-                panoptic_seg.to(self.cpu_device), segments_info
-            )
+                panoptic_seg.to(self.cpu_device), segments_info)
         else:
             if "sem_seg" in predictions:
                 vis_output = visualizer.draw_sem_seg(

@@ -13,16 +13,15 @@ from detectron2.data.build import filter_images_with_few_keypoints
 from detectron2.utils.logger import setup_logger
 from detectron2.utils.visualizer import Visualizer
 
-
 def setup(args):
     cfg = get_cfg()
     if args.config_file:
+        # 
         cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg.freeze()
     return cfg
-
 
 def parse_args(in_args=None):
     parser = argparse.ArgumentParser(description="Visualize ground-truth data")
@@ -84,7 +83,7 @@ if __name__ == "__main__":
                 )
                 output(vis, str(per_image["image_id"]) + ".jpg")
     else:
-        dicts = list(chain.from_iterable([DatasetCatalog.get(k) for k in cfg.DATASETS.TRAIN]))
+        dicts = list(chain.from_iterable([DatasetCatalog.get(k) for k in cfg.DATASETS.TEST]))
         if cfg.MODEL.KEYPOINT_ON:
             dicts = filter_images_with_few_keypoints(dicts, 1)
         for dic in tqdm.tqdm(dicts):

@@ -10,11 +10,25 @@ import warnings
 import cv2
 import tqdm
 
+import sys
+sys.path.append('/home/lab530/KenYu/detectron2')
+
+
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
 from detectron2.utils.logger import setup_logger
 
 from predictor import VisualizationDemo
+
+
+# For Panoptic DepthLab
+# import sys
+# sys.path.append('/home/lab530/KenYu/detectron2/projects/Panoptic-DeepLab/panoptic_deeplab')
+# import add_panoptic_deeplab_config
+# from config import add_panoptic_deeplab_config
+
+# # For Panoptic-DeepLab
+from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
 
 # constants
 WINDOW_NAME = "COCO detections"
@@ -24,10 +38,10 @@ def setup_cfg(args):
     # load config from file and command-line arguments
     cfg = get_cfg()
     # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
-    # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
-    # add_panoptic_deeplab_config(cfg)
+    add_panoptic_deeplab_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
+    
     # Set score_threshold for builtin models
     cfg.MODEL.RETINANET.SCORE_THRESH_TEST = args.confidence_threshold
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.confidence_threshold
@@ -102,6 +116,7 @@ if __name__ == "__main__":
     demo = VisualizationDemo(cfg)
 
     if args.input:
+        # print(f"args.input = {args.input}")
         if len(args.input) == 1:
             args.input = glob.glob(os.path.expanduser(args.input[0]))
             assert args.input, "The input path(s) was not found"

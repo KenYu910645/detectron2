@@ -76,14 +76,16 @@ class PanopticDeepLabTargetGenerator(object):
                     shape=(H, W), used as weights for offset regression 0 is
                     ignore, 1 is has instance. Multiply this mask to loss.
         """
+        # print(f"panoptic.shape = {panoptic.shape}") # (512, 1024)
         height, width = panoptic.shape[0], panoptic.shape[1]
         semantic = np.zeros_like(panoptic, dtype=np.uint8) + self.ignore_label
-        center = np.zeros((height, width), dtype=np.float32)
+        center   = np.zeros((height, width), dtype=np.float32)
         center_pts = []
         offset = np.zeros((2, height, width), dtype=np.float32)
         y_coord, x_coord = np.meshgrid(
             np.arange(height, dtype=np.float32), np.arange(width, dtype=np.float32), indexing="ij"
         )
+        
         # Generate pixel-wise loss weights
         semantic_weights = np.ones_like(panoptic, dtype=np.uint8)
         # 0: ignore, 1: has instance
@@ -145,11 +147,11 @@ class PanopticDeepLabTargetGenerator(object):
         center_weights = center_weights[None]
         offset_weights = offset_weights[None]
         return dict(
-            sem_seg=torch.as_tensor(semantic.astype("long")),
-            center=torch.as_tensor(center.astype(np.float32)),
-            center_points=center_pts,
-            offset=torch.as_tensor(offset.astype(np.float32)),
-            sem_seg_weights=torch.as_tensor(semantic_weights.astype(np.float32)),
-            center_weights=torch.as_tensor(center_weights.astype(np.float32)),
-            offset_weights=torch.as_tensor(offset_weights.astype(np.float32)),
+            sem_seg         = torch.as_tensor(semantic.astype("long")),
+            center          = torch.as_tensor(center.astype(np.float32)),     
+            center_points   = center_pts,
+            offset          = torch.as_tensor(offset.astype(np.float32)),
+            sem_seg_weights = torch.as_tensor(semantic_weights.astype(np.float32)),
+            center_weights  = torch.as_tensor(center_weights.astype(np.float32)),
+            offset_weights  = torch.as_tensor(offset_weights.astype(np.float32)),
         )

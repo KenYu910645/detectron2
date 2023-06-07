@@ -18,11 +18,20 @@ from detectron2.evaluation import (
     CityscapesInstanceEvaluator,
     CityscapesSemSegEvaluator,
     COCOEvaluator,
-    COCOPanopticEvaluator,
+    # COCOPanopticEvaluator,
     DatasetEvaluators,
 )
+import sys
+sys.path.append('/home/lab530/KenYu/detectron2/detectron2')
+from evaluation import COCOPanopticEvaluator
 from detectron2.projects.deeplab import build_lr_scheduler
-from detectron2.projects.panoptic_deeplab import (
+
+# Using local files instead of pip pre-build
+# from detectron2.projects.panoptic_deeplab import (
+#     PanopticDeeplabDatasetMapper,
+#     add_panoptic_deeplab_config,
+# )
+from panoptic_deeplab import (
     PanopticDeeplabDatasetMapper,
     add_panoptic_deeplab_config,
 )

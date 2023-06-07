@@ -18,6 +18,7 @@ from detectron2.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMa
 from detectron2.utils.file_io import PathManager
 
 from .colormap import random_color
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +180,17 @@ class _PanopticPrediction:
                         "isthing": bool(isthing),
                     }
                 )
+        else:
+            assert metadata is not None
+            label_divisor = metadata.label_divisor
+            for seg in segments_info:
+                panoptic_label = seg["id"]
+                if panoptic_label == -1:
+                    # VOID region.
+                    continue
+                seg["category_id"] = int(panoptic_label // label_divisor)
+                seg["isthing"]     = bool(seg["category_id"] in metadata.thing_dataset_id_to_contiguous_id.values())
+            
         del metadata
 
         self._seg = panoptic_seg
@@ -485,6 +497,9 @@ class Visualizer:
         Returns:
             output (VisImage): image object with visualizations.
         """
+        # print(f"panoptic_seg = {panoptic_seg.shape}") # torch.Size([1024, 2048])
+        # print(f"self.metadata = {self.metadata}")
+        
         pred = _PanopticPrediction(panoptic_seg, segments_info, self.metadata)
 
         if self._instance_mode == ColorMode.IMAGE_BW:
@@ -492,6 +507,10 @@ class Visualizer:
 
         # draw mask for all semantic segments first i.e. "stuff"
         for mask, sinfo in pred.semantic_masks():
+            # print(f"mask = {mask}") # Boolean
+            # print(f"sinfo = {sinfo}")
+            # sinfo = {'id': 1001, 'category_id': 1, 'isthing': False, 'area': 167616.0}
+            
             category_idx = sinfo["category_id"]
             try:
                 mask_color = [x / 255 for x in self.metadata.stuff_colors[category_idx]]
@@ -513,22 +532,33 @@ class Visualizer:
         if len(all_instances) == 0:
             return self.output
         masks, sinfo = list(zip(*all_instances))
+        # print(sinfo) # {'id': 2001, 'category_id': 2, 'depth': 32.61969757080078, 'isthing': True, 'area': 902971.0}
         category_ids = [x["category_id"] for x in sinfo]
 
         try:
             scores = [x["score"] for x in sinfo]
         except KeyError:
             scores = None
-        labels = _create_text_labels(
-            category_ids, scores, self.metadata.thing_classes, [x.get("iscrowd", 0) for x in sinfo]
-        )
-
-        try:
-            colors = [
-                self._jitter([x / 255 for x in self.metadata.thing_colors[c]]) for c in category_ids
-            ]
-        except AttributeError:
-            colors = None
+        
+        labels = _create_text_labels(category_ids, scores, self.metadata.thing_classes, [x.get("iscrowd", 0) for x in sinfo])
+        
+        # Add depth to labels
+        depths = [x["depth"] for x in sinfo]
+        labels = [f"{label} {round(depths[i], 1)}" for i, label in enumerate(labels)]
+        
+        # Get Color of instances
+        # Original Panoptic Color
+        # try:
+        #     colors = [self._jitter([x / 255 for x in self.metadata.thing_colors[c]]) for c in category_ids]
+        # except AttributeError:
+        #     colors = None
+        # Apply the colormap
+        min_depth = 10
+        max_depth = 60
+        norm_depths = 1 - (np.array(depths) - min_depth)/(max_depth - min_depth)
+        
+        cmap = plt.get_cmap('OrRd') # 'plasma'
+        colors = cmap(norm_depths)[:, :3]
         self.overlay_instances(masks=masks, labels=labels, assigned_colors=colors, alpha=alpha)
 
         return self.output

@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# Copyright (c) Facebook, Inc. and its affiliates.
-
 import argparse
 import json
 import numpy as np
@@ -49,44 +46,49 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger = setup_logger()
-
+    
+    # Load input preidction json file
     with PathManager.open(args.input, "r") as f:
         predictions = json.load(f)
     
-    pred_by_image = defaultdict(list)
-    for p in predictions:
-        pred_by_image[p["image_id"]].append(p)
+    # demo = VisualizationDemo(cfg)
+    
+    panoptic_seg, segments_info = predictions["panoptic_seg"]
+                vis_output = visualizer.draw_panoptic_seg_predictions(
+                    panoptic_seg.to(self.cpu_device), segments_info
+                )
+    
 
-    dicts = list(DatasetCatalog.get(args.dataset))
-    metadata = MetadataCatalog.get(args.dataset)
-    if hasattr(metadata, "thing_dataset_id_to_contiguous_id"):
+    # with PathManager.open(args.input, "r") as f:
+    #     predictions = json.load(f)
+    
+    # pred_by_image = defaultdict(list)
+    # for p in predictions:
+    #     pred_by_image[p["image_id"]].append(p)
 
-        def dataset_id_map(ds_id):
-            return metadata.thing_dataset_id_to_contiguous_id[ds_id]
+    # dicts = list(DatasetCatalog.get(args.dataset))
+    # metadata = MetadataCatalog.get(args.dataset)
+    # if hasattr(metadata, "thing_dataset_id_to_contiguous_id"):
 
-    elif "lvis" in args.dataset:
-        # LVIS results are in the same format as COCO results, but have a different
-        # mapping from dataset category id to contiguous category id in [0, #categories - 1]
-        def dataset_id_map(ds_id):
-            return ds_id - 1
+    #     def dataset_id_map(ds_id):
+    #         return metadata.thing_dataset_id_to_contiguous_id[ds_id]
+    # else:
+    #     raise ValueError("Unsupported dataset: {}".format(args.dataset))
 
-    else:
-        raise ValueError("Unsupported dataset: {}".format(args.dataset))
+    # os.makedirs(args.output, exist_ok=True)
 
-    os.makedirs(args.output, exist_ok=True)
+    # for dic in tqdm.tqdm(dicts):
+    #     img = cv2.imread(dic["file_name"], cv2.IMREAD_COLOR)[:, :, ::-1]
+    #     basename = os.path.basename(dic["file_name"])
 
-    for dic in tqdm.tqdm(dicts):
-        img = cv2.imread(dic["file_name"], cv2.IMREAD_COLOR)[:, :, ::-1]
-        basename = os.path.basename(dic["file_name"])
-
-        predictions = create_instances(pred_by_image[dic["image_id"]], img.shape[:2])
-        # print(f"predictions = {predictions}")
+    #     predictions = create_instances(pred_by_image[dic["image_id"]], img.shape[:2])
+    #     # print(f"predictions = {predictions}")
         
-        vis = Visualizer(img, metadata)
-        vis_pred = vis.draw_instance_predictions(predictions).get_image()
+    #     vis = Visualizer(img, metadata)
+    #     vis_pred = vis.draw_instance_predictions(predictions).get_image()
 
-        vis = Visualizer(img, metadata)
-        vis_gt   = vis.draw_dataset_dict(dic)                .get_image()
+    #     vis = Visualizer(img, metadata)
+    #     vis_gt   = vis.draw_dataset_dict(dic)                .get_image()
 
-        concat = np.concatenate((vis_pred, vis_gt), axis=1)
-        cv2.imwrite(os.path.join(args.output, basename), concat[:, :, ::-1])
+    #     concat = np.concatenate((vis_pred, vis_gt), axis=1)
+    #     cv2.imwrite(os.path.join(args.output, basename), concat[:, :, ::-1])

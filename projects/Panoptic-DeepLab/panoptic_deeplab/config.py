@@ -19,10 +19,12 @@ def add_panoptic_deeplab_config(cfg):
     cfg.INPUT.IGNORE_CROWD_IN_SEMANTIC = False
     # Optimizer type.
     cfg.SOLVER.OPTIMIZER = "ADAM"
+    
     # Panoptic-DeepLab semantic segmentation head.
     # We add an extra convolution before predictor.
     cfg.MODEL.SEM_SEG_HEAD.HEAD_CHANNELS = 256
     cfg.MODEL.SEM_SEG_HEAD.LOSS_TOP_K = 0.2
+    
     # Panoptic-DeepLab instance segmentation head.
     cfg.MODEL.INS_EMBED_HEAD = CN()
     cfg.MODEL.INS_EMBED_HEAD.NAME = "PanopticDeepLabInsEmbedHead"
@@ -39,6 +41,22 @@ def add_panoptic_deeplab_config(cfg):
     cfg.MODEL.INS_EMBED_HEAD.NORM = "SyncBN"
     cfg.MODEL.INS_EMBED_HEAD.CENTER_LOSS_WEIGHT = 200.0
     cfg.MODEL.INS_EMBED_HEAD.OFFSET_LOSS_WEIGHT = 0.01
+    
+    # Panoptic-DeepLab depth head.
+    cfg.MODEL.DEPTH_HEAD = CN()
+    cfg.MODEL.DEPTH_HEAD.NAME = "PanopticDeepLabDepthHead"
+    cfg.MODEL.DEPTH_HEAD.IN_FEATURES = ["res2", "res3", "res5"]
+    cfg.MODEL.DEPTH_HEAD.PROJECT_FEATURES = ["res2", "res3"]
+    cfg.MODEL.DEPTH_HEAD.PROJECT_CHANNELS = [32, 64]
+    cfg.MODEL.DEPTH_HEAD.ASPP_CHANNELS = 256
+    cfg.MODEL.DEPTH_HEAD.ASPP_DILATIONS = [6, 12, 18]
+    cfg.MODEL.DEPTH_HEAD.ASPP_DROPOUT = 0.1
+    cfg.MODEL.DEPTH_HEAD.HEAD_CHANNELS = 256
+    cfg.MODEL.DEPTH_HEAD.CONVS_DIM = 256
+    cfg.MODEL.DEPTH_HEAD.COMMON_STRIDE = 4
+    cfg.MODEL.DEPTH_HEAD.NORM = "SyncBN"
+    cfg.MODEL.DEPTH_HEAD.LOSS_TYPE = "smoothedL1"
+    
     # Panoptic-DeepLab post-processing setting.
     cfg.MODEL.PANOPTIC_DEEPLAB = CN()
     # Stuff area limit, ignore stuff region below this number.
