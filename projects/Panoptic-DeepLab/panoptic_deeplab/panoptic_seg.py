@@ -735,7 +735,9 @@ class PanopticDeepLabDepthHead(DeepLabV3PlusHead):
         # self.loss_weight = loss_weight
         self.loss_type = loss_type
         use_bias = norm == ""
-
+        self.beta = 80.0
+        self.gamma = 1.0
+        self.ord_num = 90
         ############
         ### Head ###
         ############
@@ -767,7 +769,7 @@ class PanopticDeepLabDepthHead(DeepLabV3PlusHead):
         ### Predictor ###
         #################
         if loss_type == "dorn":
-            self.predictor = Conv2d(head_channels, 180, kernel_size=1)
+            self.predictor = Conv2d(head_channels, 2*self.ord_num, kernel_size=1)
         else:
             self.predictor = Conv2d(head_channels, 1, kernel_size=1)
         nn.init.normal_(self.predictor.weight, 0, 0.001)
@@ -780,7 +782,7 @@ class PanopticDeepLabDepthHead(DeepLabV3PlusHead):
         if loss_type == "smoothedL1":
             self.loss = nn.L1Loss(reduction="none")
         elif loss_type == "dorn":
-            self.loss = OrdinalRegressionLoss(ord_num=90, beta=80.0, discretization="SID")
+            self.loss = OrdinalRegressionLoss(ord_num=self.ord_num, beta=self.beta, discretization="SID")
         else:
             raise ValueError("Unexpected loss type: %s" % loss_type)
 
@@ -829,9 +831,23 @@ class PanopticDeepLabDepthHead(DeepLabV3PlusHead):
         if self.training:
             return None, self.losses(y, targets, weights)
         else:
-            y = F.interpolate(
-                y, scale_factor=self.common_stride, mode="bilinear", align_corners=False
-            )
+            # TODO, need to test
+            if self.loss_type == "dorn": # DORN inference
+                N, C, H, W = y.size()
+                y = y.view(-1, 2, self.ord_num, H, W)
+                prob = F.softmax(y, dim=1)[:, 0, :, :, :]
+                label = torch.sum((prob > 0.5), dim=1)
+                # print("prob shape:", prob.shape, " label shape:", label.shape)
+                t0 = torch.exp(np.log(self.beta) * label.float() / self.ord_num)
+                t1 = torch.exp(np.log(self.beta) * (label.float() + 1) / self.ord_num)
+                y = (t0 + t1) / 2 - self.gamma
+                # print("depth min:", torch.min(depth), " max:", torch.max(depth),
+                #       " label min:", torch.min(label), " max:", torch.max(label))
+                # return {"target": [depth], "prob": [prob], "label": [label]}
+                y = y.unsqueeze(1)
+                print(f"[panoptic_seg.py] y = {y.shape}") # ([1, 256, 512])
+            
+            y = F.interpolate(y, scale_factor=self.common_stride, mode="bilinear", align_corners=False)
             return y, {}
 
     def layers(self, features):
@@ -853,6 +869,9 @@ class PanopticDeepLabDepthHead(DeepLabV3PlusHead):
         # print(f"losses targets = {targets.shape}") # [2, 512, 1024]
         
         if self.loss_type == "dorn":
+            N, C, H, W = predictions.size()
+            predictions = predictions.view(-1, 2, C//2, H, W)
+            predictions = F.log_softmax(predictions, dim=1).view(N, C, H, W)
             loss = self.loss(predictions, targets)
         else:
             loss = self.loss(predictions, targets) * weights

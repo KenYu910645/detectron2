@@ -164,6 +164,13 @@ def main(args):
 
     trainer = Trainer(cfg)
     trainer.resume_or_load(resume=args.resume)
+
+    # Added by spiderkiller, to freeze the weights of other than depth head 
+    if False:
+        for name, param in trainer.model.named_parameters():
+            if not "depth_head" in name:
+                param.requires_grad = False
+                print(f"Freeze weight of {name}")
     return trainer.train()
 
 

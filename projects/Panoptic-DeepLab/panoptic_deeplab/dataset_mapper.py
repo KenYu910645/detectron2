@@ -120,7 +120,8 @@ class PanopticDeeplabDatasetMapper:
         path_list[2] = 'disparity'
         disparity_path = '/'.join(path_list)
         dis_label = cv2.imread( os.path.join(disparity_path, dataset_dict['image_id'] + "_disparity.png"), cv2.IMREAD_UNCHANGED) # read the 16-bit disparity png file
-        dis_label = np.array(dis_label).astype(np.float) 
+        dis_label = np.array(dis_label).astype(float)
+        
         # convert the png file to real disparity values, according to the official documentation.
         dis_label[dis_label > 0] = (dis_label[dis_label > 0] - 1) / 256 
         # Add small number in disparity to avoid ZeroDivisionError
