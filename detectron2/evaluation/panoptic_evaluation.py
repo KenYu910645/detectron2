@@ -19,7 +19,7 @@ from detectron2.utils.file_io import PathManager
 
 from .evaluator import DatasetEvaluator
 
-
+import shutil
 import sys
 sys.path.append('/home/lab530/KenYu/detectron2/detectron2')
 from utils.visualizer import Visualizer, ColorMode
@@ -52,6 +52,12 @@ class COCOPanopticEvaluator(DatasetEvaluator):
         self._output_dir = output_dir
         if self._output_dir is not None:
             PathManager.mkdirs(self._output_dir)
+        
+        # Clean output directory
+        self.pred_dir = os.path.join(self._output_dir, "predictions")
+        if os.path.exists(self.pred_dir):
+            shutil.rmtree(self.pred_dir)
+            os.makedirs(self.pred_dir)
 
     def reset(self):
         self._predictions = []
@@ -73,7 +79,6 @@ class COCOPanopticEvaluator(DatasetEvaluator):
 
     def process(self, inputs, outputs):
         from panopticapi.utils import id2rgb
-
         for input, output in zip(inputs, outputs):
             depth_map = output["depth"].squeeze()
             panoptic_img, segments_info = output["panoptic_seg"]
@@ -125,19 +130,30 @@ class COCOPanopticEvaluator(DatasetEvaluator):
             # Get Depth Estimation in instance(Avg out)
             for seg in segments_info:
                 seg["depth"] = depth_map[ panoptic_img == seg["id"] ].mean().item()
-                # print(f"seg['depth'] = {seg['depth']}")
-            
             
             # Use Demo visualizer to output the result
             # image (np.ndarray): an image of shape (H, W, C) (in BGR order).
             
-            # print(f"self._metadata = {self._metadata}")
-            pred_path = os.path.join(self._output_dir, "predictions", file_name_new)
+            print(f"self._metadata = {self._metadata.stuff_classes}") # sidewalk, road
+            print(f"self._metadata = {self._metadata.stuff_colors}") # sidewalk, road
+            
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("sidewalk") ] = (214, 213, 183)
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("road")     ] = (222, 211, 140)
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("terrain")  ] = (137, 190, 178)
+            # self._metadata.stuff_colors[ self._metadata.stuff_classes.index("terrain")  ] = (222, 211, 140)
+            
+            # Output Panoptic Result
+            with open(os.path.join(self.pred_dir, file_name_png), "wb") as f:
+                f.write(panoptic_data)
+            
+            # Output Depth Estimation Result
+            with open(os.path.join(self.pred_dir, file_name_dep), "wb") as f:
+                f.write(depth_data)
+            
+            # Output Panoptic DepthLab Result
             visualizer = Visualizer(input['image'].permute(1, 2, 0).cpu().numpy(), self._metadata, instance_mode = ColorMode.IMAGE)
-            # vis_output = visualizer.draw_panoptic_seg_predictions(torch.from_numpy(panoptic_img), None)
             vis_output = visualizer.draw_panoptic_seg_predictions(torch.from_numpy(panoptic_img), segments_info)
-            vis_output.save(pred_path)
-            # print(f"pred_path = {pred_path}")
+            vis_output.save(os.path.join(self.pred_dir, file_name_new))
             
             self._predictions.append(
                 {
@@ -152,7 +168,7 @@ class COCOPanopticEvaluator(DatasetEvaluator):
 
     def evaluate(self):
         comm.synchronize()
-
+        
         self._predictions = comm.gather(self._predictions)
         self._predictions = list(itertools.chain(*self._predictions))
         if not comm.is_main_process():
@@ -165,17 +181,15 @@ class COCOPanopticEvaluator(DatasetEvaluator):
         with tempfile.TemporaryDirectory(prefix="panoptic_eval") as pred_dir_tmp:
             # logger.info("Writing all panoptic predictions to {} ...".format(pred_dir))
             pred_dir = os.path.join(self._output_dir, "predictions")
-            if not os.path.exists(pred_dir):
-                os.makedirs(pred_dir)
             
-            for p in self._predictions:
-                # Output Panoptic Result
-                with open(os.path.join(pred_dir, p["file_name"]), "wb") as f:
-                    f.write(p.pop("png_string"))
+            # for p in self._predictions:
+            #     # Output Panoptic Result
+            #     with open(os.path.join(pred_dir, p["file_name"]), "wb") as f:
+            #         f.write(p.pop("png_string"))
                 
-                # Output Depth Estimation Result
-                with open(os.path.join(pred_dir, p["file_name_depth"]), "wb") as f:
-                    f.write(p.pop("depth_string"))
+            #     # Output Depth Estimation Result
+            #     with open(os.path.join(pred_dir, p["file_name_depth"]), "wb") as f:
+            #         f.write(p.pop("depth_string"))
 
             # Load ground true annotations and make it become the prediction result
             with open(gt_json, "r") as f:

@@ -557,7 +557,7 @@ class Visualizer:
         max_depth = 60
         norm_depths = 1 - (np.array(depths) - min_depth)/(max_depth - min_depth)
         
-        cmap = plt.get_cmap('OrRd') # 'plasma'
+        cmap = plt.get_cmap('jet') # 'plasma' #　OrRd # jet # Reds
         colors = cmap(norm_depths)[:, :3]
         self.overlay_instances(masks=masks, labels=labels, assigned_colors=colors, alpha=alpha)
 
