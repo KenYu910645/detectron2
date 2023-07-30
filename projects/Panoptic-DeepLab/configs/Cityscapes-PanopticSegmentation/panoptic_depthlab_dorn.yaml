@@ -1,4 +1,4 @@
-OUTPUT_DIR: ./output_test
+OUTPUT_DIR: ./output_dorn
 MODEL:
   META_ARCHITECTURE: "PanopticDeepLab"
   WEIGHTS: "detectron2://DeepLab/R-52.pkl"
@@ -56,7 +56,7 @@ MODEL:
     CONVS_DIM: 256
     COMMON_STRIDE: 4
     NORM: "SyncBN"
-    LOSS_TYPE: "smoothedL1" # "smoothedL1" "dorn"
+    LOSS_TYPE: "dorn" # "smoothedL1" "dorn"
   PANOPTIC_DEEPLAB:
     STUFF_AREA: 2048
     CENTER_THRESHOLD: 0.1
@@ -73,7 +73,7 @@ SOLVER:
   WEIGHT_DECAY_BIAS: 0.0
   MAX_ITER: 90000
   LR_SCHEDULER_NAME: "WarmupPolyLR"
-  IMS_PER_BATCH: 14 # 4 # 14 # 32
+  IMS_PER_BATCH: 8 # 4 # 14 # 32
   CHECKPOINT_PERIOD: 500 # 500
 INPUT:
   FORMAT: "RGB"

@@ -13,18 +13,24 @@
 #########################
 ### panoptic_depthlab ###
 #########################
-# Training
+# # Training
 python train_net.py \
 --config-file configs/Cityscapes-PanopticSegmentation/panoptic_depthlab.yaml \
 --num-gpus 2 \
-# MODEL.WEIGHTS model_final_bd324a.pkl
---resume 
+MODEL.WEIGHTS model_final_bd324a.pkl
+# --resume
 
-# # Inference
+
+# Inference
 # export CUDA_VISIBLE_DEVICES=1
 # python train_net.py \
 # --config-file configs/Cityscapes-PanopticSegmentation/panoptic_depthlab.yaml \
-# --eval-only MODEL.WEIGHTS output/model_0004999.pth
+# --eval-only MODEL.WEIGHTS output_depthlab_L1loss/model_0004999.pth
+
+# export CUDA_VISIBLE_DEVICES=1
+# python train_net.py \
+# --config-file configs/Cityscapes-PanopticSegmentation/panoptic_depthlab_dorn.yaml \
+# --eval-only MODEL.WEIGHTS output_dorn/model_0009999.pth
 
 # Visualize prediction result
 # Benchmark network speed
