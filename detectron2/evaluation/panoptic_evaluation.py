@@ -23,6 +23,7 @@ import shutil
 import sys
 sys.path.append('/home/lab530/KenYu/detectron2/detectron2')
 from utils.visualizer import Visualizer, ColorMode
+import cv2
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +56,20 @@ class COCOPanopticEvaluator(DatasetEvaluator):
         
         # Clean output directory
         self.pred_dir = os.path.join(self._output_dir, "predictions")
-        if os.path.exists(self.pred_dir):
-            shutil.rmtree(self.pred_dir)
-            os.makedirs(self.pred_dir)
-
+        if os.path.exists(self.pred_dir): shutil.rmtree(self.pred_dir)
+        os.makedirs(self.pred_dir)
+        print(f"[panoptic_evaluation.py]Clean output directory: {self.pred_dir}")
+        
+        # Evalute depth estimation
+        self.RSE = 0
+        self.RAE = 0
+        self.IRMSE = 0
+        self.SILog = 0
+        self.ACC_1 = 0
+        self.ACC_2 = 0
+        self.ACC_3 = 0
+        
+    
     def reset(self):
         self._predictions = []
 
@@ -134,13 +145,16 @@ class COCOPanopticEvaluator(DatasetEvaluator):
             # Use Demo visualizer to output the result
             # image (np.ndarray): an image of shape (H, W, C) (in BGR order).
             
-            print(f"self._metadata = {self._metadata.stuff_classes}") # sidewalk, road
-            print(f"self._metadata = {self._metadata.stuff_colors}") # sidewalk, road
+            # print(f"self._metadata = {self._metadata.stuff_classes}") # sidewalk, road
+            # print(f"self._metadata = {self._metadata.stuff_colors}") # sidewalk, road
             
-            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("sidewalk") ] = (214, 213, 183)
-            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("road")     ] = (222, 211, 140)
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("sidewalk") ] = (102, 66, 102)# (214, 213, 183)
+            # self._metadata.stuff_colors[ self._metadata.stuff_classes.index("road")     ] = (222, 211, 140)
             self._metadata.stuff_colors[ self._metadata.stuff_classes.index("terrain")  ] = (137, 190, 178)
             # self._metadata.stuff_colors[ self._metadata.stuff_classes.index("terrain")  ] = (222, 211, 140)
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("vegetation")  ] = (63, 79, 57) # (102, 128,  89)
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("traffic light")  ] = (113, 104, 55) # (102, 128,  89)
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("traffic sign")   ] = (113, 104, 55) # (102, 128,  89)
             
             # Output Panoptic Result
             with open(os.path.join(self.pred_dir, file_name_png), "wb") as f:
@@ -154,6 +168,41 @@ class COCOPanopticEvaluator(DatasetEvaluator):
             visualizer = Visualizer(input['image'].permute(1, 2, 0).cpu().numpy(), self._metadata, instance_mode = ColorMode.IMAGE)
             vis_output = visualizer.draw_panoptic_seg_predictions(torch.from_numpy(panoptic_img), segments_info)
             vis_output.save(os.path.join(self.pred_dir, file_name_new))
+            
+            gt_depth_dir = "/home/lab530/KenYu/cityscapes/disparity/val/"
+            camera_dir   = "/home/lab530/KenYu/cityscapes/camera/val/"
+            
+            # Get Depth Estimation Evaluation
+            pd_depth_path = os.path.join(self.pred_dir, "_".join(file_name.split("_")[:3]) + "_leftImg8bit_depth.png")
+            gt_depth_path = os.path.join(gt_depth_dir, file_name.split("_")[0], "_".join(file_name.split("_")[:3]) + "_disparity.png")
+            camera_path   = os.path.join(camera_dir  , file_name.split("_")[0], "_".join(file_name.split("_")[:3]) + "_camera.json")
+            # print(f"gt_depth_path = {gt_depth_path}")
+            # print(f"camera_path = {camera_path}")
+            camera        = json.load( open(camera_path) )
+
+            # Process the ground truth depth map
+            dis_map = load_disparity(gt_depth_path)
+            gt_depth = convert_disparity_to_depth(dis_map, camera)
+
+            # Load depth prediction result 
+            pd_depth = cv2.imread(pd_depth_path, cv2.IMREAD_GRAYSCALE)
+
+            non_zero_indices = np.nonzero(gt_depth)
+            gt_depth = gt_depth[ non_zero_indices ]
+            pd_depth = pd_depth[ non_zero_indices ]
+            
+            # Avoid zero depth in prediction map
+            pd_depth = np.where(pd_depth == 0, 0.1, pd_depth)
+            
+            assert pd_depth.shape == gt_depth.shape, "Depth maps must have the same shape"    
+
+            self.RSE   += calculate_rse    (gt_depth, pd_depth) / 500
+            self.RAE   += calculate_rae    (gt_depth, pd_depth) / 500
+            self.IRMSE += calculate_irmse  (gt_depth, pd_depth) / 500
+            self.SILog += calculate_silog  (gt_depth, pd_depth) / 500
+            self.ACC_1 += calculate_depth_threshold_accuracy(gt_depth, pd_depth, threshold=1.25) / 500
+            self.ACC_2 += calculate_depth_threshold_accuracy(gt_depth, pd_depth, threshold=1.25**2) / 500
+            self.ACC_3 += calculate_depth_threshold_accuracy(gt_depth, pd_depth, threshold=1.25**3) / 500
             
             self._predictions.append(
                 {
@@ -181,6 +230,14 @@ class COCOPanopticEvaluator(DatasetEvaluator):
         with tempfile.TemporaryDirectory(prefix="panoptic_eval") as pred_dir_tmp:
             # logger.info("Writing all panoptic predictions to {} ...".format(pred_dir))
             pred_dir = os.path.join(self._output_dir, "predictions")
+            
+            print(f"RSE = {self.RSE}")
+            print(f"RAE = {self.RAE}")
+            print(f"IRMSE = {self.IRMSE}")
+            print(f"SILog = {self.SILog}")
+            print(f"ACC_1 = {self.ACC_1}")
+            print(f"ACC_2 = {self.ACC_2}")
+            print(f"ACC_3 = {self.ACC_3}")
             
             # for p in self._predictions:
             #     # Output Panoptic Result
@@ -240,6 +297,102 @@ def _print_panoptic_results(pq_res):
     )
     logger.info("Panoptic Evaluation Results:\n" + table)
 
+def calculate_rse(gt_depth, pd_depth):
+    # Calculate squared differences between predicted and true values
+    squared_diff = np.square(pd_depth - gt_depth)
+    
+    # Calculate squared differences between true values and their mean
+    squared_diff_mean = np.square(gt_depth - np.mean(gt_depth))
+    
+    # Calculate RSE
+    rse = np.sum(squared_diff) / np.sum(squared_diff_mean)
+    
+    return rse
+
+def calculate_rae(gt_depth, pd_depth):
+    # Calculate absolute differences between predicted and true values
+    abs_diff = np.abs(pd_depth - gt_depth)
+    
+    # Calculate absolute differences between true values and their mean
+    abs_diff_mean = np.abs(gt_depth - np.mean(gt_depth))
+    
+    # Calculate absErrorRel
+    abs_error_rel = np.sum(abs_diff) / np.sum(abs_diff_mean)
+    
+    return abs_error_rel
+
+def calculate_irmse(gt_depth, pd_depth):    
+    # print(f"np.any(gt_depth == 0) = {np.any(gt_depth == 0)}")
+    # print(f"np.any(pd_depth == 0) = {np.any(pd_depth == 0)}")
+    # Calculate inverse depth arrays
+    inv_gt_depth = 1.0 / gt_depth
+    inv_pd_depth = 1.0 / pd_depth
+    
+    # Calculate squared differences between inverse depths
+    squared_diff = np.square(inv_pd_depth - inv_gt_depth)
+    
+    # Calculate mean squared error
+    mse = np.mean(squared_diff)
+    
+    # Calculate iRMSE
+    irmse = np.sqrt(mse)
+    
+    # Scale iRMSE to [1/km] units
+    irmse_scaled = irmse * 1000.0
+    
+    return irmse_scaled
+
+def calculate_silog(gt_depth, pd_depth):
+    # Compute logarithm of predicted and ground truth depth values
+    log_pd_depth = np.log10(pd_depth)
+    log_gt_depth = np.log10(gt_depth)
+
+    # Calculate absolute logarithmic differences
+    abs_log_diff = np.abs(log_pd_depth - log_gt_depth)
+
+    # Compute mean absolute logarithmic difference
+    mean_abs_log_diff = np.mean(abs_log_diff)
+
+    # Scale mean absolute logarithmic difference by 100 to obtain SILog
+    silog = mean_abs_log_diff * 100
+
+    return silog
+
+def calculate_depth_threshold_accuracy(gt_depth, pd_depth , threshold=1.25):
+    
+    # Calculate the maximum ratio between predicted and ground truth depths
+    max_ratio = np.maximum(pd_depth / gt_depth, gt_depth / pd_depth)
+    
+    # Count the number of pixels below the threshold
+    num_below_threshold = np.sum(max_ratio < threshold)
+    
+    # Calculate the depth threshold accuracy as a percentage
+    depth_threshold_accuracy = (num_below_threshold / max_ratio.size) * 100
+    
+    return depth_threshold_accuracy
+
+def load_disparity(disparity_path):
+    dis_label = cv2.imread(disparity_path, cv2.IMREAD_UNCHANGED) # read the 16-bit disparity png file
+    dis_label = np.array(dis_label).astype(np.float) 
+    dis_label[dis_label > 0] = (dis_label[dis_label > 0] - 1) / 256 # convert the png file to real disparity values, according to the official documentation. 
+    return dis_label
+
+def convert_disparity_to_depth(dis_label, camera):
+    # Convert disparity map to depth map
+    # print(camera)
+    depth = camera['extrinsic']['baseline'] * camera['intrinsic']['fx'] / dis_label
+
+    # zero mean don't care pixels
+    depth[depth == np.inf] = 0
+    depth[depth == np.nan] = 0
+    # Cap at 100m
+    depth = np.minimum(depth, 80)
+
+    # Eliminate the pixels that are too far away and is on the boundary of the image
+    THRESHOLD = 40
+    depth[        :, :90][depth[        :, :90] > THRESHOLD] = 0
+    depth[1024-180:, :  ][depth[1024-180:, :  ] > THRESHOLD] = 0
+    return depth 
 
 if __name__ == "__main__":
     from detectron2.utils.logger import setup_logger

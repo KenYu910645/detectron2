@@ -556,6 +556,12 @@ class Visualizer:
         min_depth = 10
         max_depth = 60
         norm_depths = 1 - (np.array(depths) - min_depth)/(max_depth - min_depth)
+
+        
+        # Remap [0,1] to [0, 0.85]
+        target_min = 0.15
+        target_max = 1.0
+        norm_depths = norm_depths * (target_max - target_min) + target_min
         
         cmap = plt.get_cmap('jet') # 'plasma' #　OrRd # jet # Reds
         colors = cmap(norm_depths)[:, :3]
