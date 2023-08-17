@@ -10,9 +10,8 @@ import warnings
 import cv2
 import tqdm
 
-import sys
-sys.path.append('/home/lab530/KenYu/detectron2')
-
+# import sys
+# sys.path.append('/home/lab530/KenYu/detectron2')
 
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
@@ -116,7 +115,6 @@ if __name__ == "__main__":
     demo = VisualizationDemo(cfg)
 
     if args.input:
-        # print(f"args.input = {args.input}")
         if len(args.input) == 1:
             args.input = glob.glob(os.path.expanduser(args.input[0]))
             assert args.input, "The input path(s) was not found"

@@ -18,24 +18,14 @@ from detectron2.evaluation import (
     CityscapesInstanceEvaluator,
     CityscapesSemSegEvaluator,
     COCOEvaluator,
-    # COCOPanopticEvaluator,
+    COCOPanopticEvaluator,
     DatasetEvaluators,
 )
-import sys
-sys.path.append('/home/lab530/KenYu/detectron2/detectron2')
-from evaluation import COCOPanopticEvaluator
-from detectron2.projects.deeplab import build_lr_scheduler
-
-# Using local files instead of pip pre-build
-# from detectron2.projects.panoptic_deeplab import (
-#     PanopticDeeplabDatasetMapper,
-#     add_panoptic_deeplab_config,
-# )
 from panoptic_deeplab import (
     PanopticDeeplabDatasetMapper,
     add_panoptic_deeplab_config,
 )
-from detectron2.solver import get_default_optimizer_params
+from detectron2.solver import get_default_optimizer_params, build_lr_scheduler
 from detectron2.solver.build import maybe_add_gradient_clipping
 
 
@@ -164,13 +154,6 @@ def main(args):
 
     trainer = Trainer(cfg)
     trainer.resume_or_load(resume=args.resume)
-
-    # Added by spiderkiller, to freeze the weights of other than depth head 
-    if False:
-        for name, param in trainer.model.named_parameters():
-            if not "depth_head" in name:
-                param.requires_grad = False
-                print(f"Freeze weight of {name}")
     return trainer.train()
 
 

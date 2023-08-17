@@ -75,7 +75,7 @@ def load_cityscapes_panoptic(image_dir, gt_dir, gt_json, meta):
                 segment_info["category_id"]
             ]
         return segment_info
-
+    print(f"gt_json = {gt_json}")
     assert os.path.exists(
         gt_json
     ), "Please run `python cityscapesscripts/preparation/createPanopticImgs.py` to generate label files."  # noqa

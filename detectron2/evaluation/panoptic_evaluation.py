@@ -20,9 +20,9 @@ from detectron2.utils.file_io import PathManager
 from .evaluator import DatasetEvaluator
 
 import shutil
-import sys
-sys.path.append('/home/lab530/KenYu/detectron2/detectron2')
-from utils.visualizer import Visualizer, ColorMode
+
+# sys.path.append('/home/lab530/KenYu/detectron2/detectron2')
+from detectron2.utils.visualizer import Visualizer, ColorMode
 import cv2
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ class COCOPanopticEvaluator(DatasetEvaluator):
             file_name     = os.path.basename(input["file_name"])
             file_name_png = os.path.splitext(file_name)[0] + ".png"
             file_name_dep = os.path.splitext(file_name)[0] + "_depth.png"
-            file_name_new = os.path.splitext(file_name)[0] + "_new.png"
+            file_name_lab = os.path.splitext(file_name)[0] + "_depthlab.png"
             
             # print(f"depth_map.cpu().numpy().shape = {depth_map.cpu().numpy().shape}")
             # print(f"id2rgb(panoptic_img).shape = {id2rgb(panoptic_img).shape}")
@@ -153,7 +153,7 @@ class COCOPanopticEvaluator(DatasetEvaluator):
             self._metadata.stuff_colors[ self._metadata.stuff_classes.index("terrain")  ] = (137, 190, 178)
             # self._metadata.stuff_colors[ self._metadata.stuff_classes.index("terrain")  ] = (222, 211, 140)
             self._metadata.stuff_colors[ self._metadata.stuff_classes.index("vegetation")  ] = (63, 79, 57) # (102, 128,  89)
-            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("traffic light")  ] = (113, 104, 55) # (102, 128,  89)
+            self._metadata.stuff_colors[ self._metadata.stuff_classes.index("traffic light")  ] = (240, 222, 54)# (113, 104, 55) # (102, 128,  89)
             self._metadata.stuff_colors[ self._metadata.stuff_classes.index("traffic sign")   ] = (113, 104, 55) # (102, 128,  89)
             
             # Output Panoptic Result
@@ -167,10 +167,10 @@ class COCOPanopticEvaluator(DatasetEvaluator):
             # Output Panoptic DepthLab Result
             visualizer = Visualizer(input['image'].permute(1, 2, 0).cpu().numpy(), self._metadata, instance_mode = ColorMode.IMAGE)
             vis_output = visualizer.draw_panoptic_seg_predictions(torch.from_numpy(panoptic_img), segments_info)
-            vis_output.save(os.path.join(self.pred_dir, file_name_new))
+            vis_output.save(os.path.join(self.pred_dir, file_name_lab))
             
-            gt_depth_dir = "/home/lab530/KenYu/cityscapes/disparity/val/"
-            camera_dir   = "/home/lab530/KenYu/cityscapes/camera/val/"
+            gt_depth_dir = "/home/spiderkiller/cityscapes/disparity/val/"
+            camera_dir   = "/home/spiderkiller/cityscapes/camera/val/"
             
             # Get Depth Estimation Evaluation
             pd_depth_path = os.path.join(self.pred_dir, "_".join(file_name.split("_")[:3]) + "_leftImg8bit_depth.png")
@@ -373,13 +373,15 @@ def calculate_depth_threshold_accuracy(gt_depth, pd_depth , threshold=1.25):
 
 def load_disparity(disparity_path):
     dis_label = cv2.imread(disparity_path, cv2.IMREAD_UNCHANGED) # read the 16-bit disparity png file
-    dis_label = np.array(dis_label).astype(np.float) 
+    dis_label = np.array(dis_label).astype(float) 
     dis_label[dis_label > 0] = (dis_label[dis_label > 0] - 1) / 256 # convert the png file to real disparity values, according to the official documentation. 
     return dis_label
 
 def convert_disparity_to_depth(dis_label, camera):
+    # Set this because
+    np.seterr(divide = 'ignore')
+    
     # Convert disparity map to depth map
-    # print(camera)
     depth = camera['extrinsic']['baseline'] * camera['intrinsic']['fx'] / dis_label
 
     # zero mean don't care pixels

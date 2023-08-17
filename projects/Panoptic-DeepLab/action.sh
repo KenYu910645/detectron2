@@ -30,7 +30,3 @@ python train_net.py \
 # python train_net.py \
 # --config-file configs/Cityscapes-PanopticSegmentation/panoptic_depthlab_dorn.yaml \
 # --eval-only MODEL.WEIGHTS output_dorn/model_0009999.pth
-
-# Visualize prediction result
-# Benchmark network speed
-# python train_net.py --config-file configs/Cityscapes-PanopticSegmentation/panoptic_deeplab_R_52_os16_mg124_poly_90k_bs32_crop_512_1024_dsconv.yaml --eval-only MODEL.WEIGHTS /path/to/model_checkpoint MODEL.PANOPTIC_DEEPLAB.BENCHMARK_NETWORK_SPEED True
