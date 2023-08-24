@@ -5,7 +5,7 @@ Jia-Quan Yu, Soo-Chang Pei
 [[`arXiv`](https://arxiv.org/abs/1911.10194)]
 
 <div align="center">
-  <img src="https://github.com/KenYu910645/detectron2/tree/main/projects/Panoptic-DepthLab/picture/architecture.png"/>
+  <img src="picture/architecture.png"/>
 </div><br/>
 
 ## Installation
