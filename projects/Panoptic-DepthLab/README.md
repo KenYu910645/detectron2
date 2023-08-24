@@ -41,13 +41,13 @@ python train_net.py \
 ## Demo Result
 
 <div align="center">
-  <img src="https://github.com/KenYu910645/detectron2/tree/main/projects/Panoptic-DepthLab/picture/frankfurt_000000_000576_leftImg8bit_depthlab.png"/>
+  <img src="picture/frankfurt_000000_000576_leftImg8bit_depthlab.png"/>
 </div><br/>
 
 <div align="center">
-  <img src="https://github.com/KenYu910645/detectron2/tree/main/projects/Panoptic-DepthLab/picture/munster_000156_000019_leftImg8bit_depthlab.png"/>
+  <img src="picture/munster_000156_000019_leftImg8bit_depthlab.png"/>
 </div><br/>
 
 <div align="center">
-  <img src="https://github.com/KenYu910645/detectron2/tree/main/projects/Panoptic-DepthLab/picture/munster_000167_000019_leftImg8bit_depthlab.png"/>
+  <img src="picture/munster_000167_000019_leftImg8bit_depthlab.png"/>
 </div><br/>

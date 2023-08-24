@@ -1,4 +1,4 @@
-OUTPUT_DIR: ./output_depthlab_L1loss
+OUTPUT_DIR: ./output_test
 MODEL:
   META_ARCHITECTURE: "PanopticDeepLab"
   WEIGHTS: "detectron2://DeepLab/R-52.pkl"
