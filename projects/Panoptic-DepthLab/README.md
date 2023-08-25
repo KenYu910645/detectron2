@@ -2,7 +2,7 @@
 
 Jia-Quan Yu, Soo-Chang Pei
 
-[[`arXiv`](https://arxiv.org/abs/1911.10194)]
+[[`arXiv`](https://arxiv.org/abs/2308.12937)]
 
 <div align="center">
   <img src="picture/architecture.png"/>
